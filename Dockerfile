@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM       centos:centos7
+FROM       ubuntu:16.04
 
-MAINTAINER Sonatype <cloud-ops@sonatype.com>
+MAINTAINER DeepSecs <13841495@qq.com>
 
 LABEL vendor=Sonatype \
   com.sonatype.license="Apache License, Version 2.0" \
@@ -23,9 +23,9 @@ LABEL vendor=Sonatype \
 ARG NEXUS_VERSION=3.3.1-01
 ARG NEXUS_DOWNLOAD_URL=https://download.sonatype.com/nexus/3/nexus-${NEXUS_VERSION}-unix.tar.gz
 
-RUN yum install -y \
-  curl tar \
-  && yum clean all
+RUN apt-get update \
+  && apt-get install -y curl tar \
+  && apt-get clean
 
 # configure java runtime
 ENV JAVA_HOME=/opt/java \
