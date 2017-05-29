@@ -13,8 +13,10 @@
 # limitations under the License.
 
 FROM       ubuntu:16.04
+MAINTAINER Jiang Rensheng <13841495@qq.com>
 
-MAINTAINER DeepSecs <13841495@qq.com>
+#### set environment to fix term not set issues when building docker image ####
+ENV DEBIAN_FRONTEND noninteractive
 
 LABEL vendor=Sonatype \
   com.sonatype.license="Apache License, Version 2.0" \
@@ -67,14 +69,54 @@ RUN sed \
     -e '/^-Xmx/d' \
     -i ${NEXUS_HOME}/bin/nexus.vmoptions
 
+#### Add User Nexus ####
 RUN useradd -r -u 200 -m -c "nexus role account" -d ${NEXUS_DATA} -s /bin/false nexus \
   && mkdir -p ${NEXUS_DATA}/etc ${NEXUS_DATA}/log ${NEXUS_DATA}/tmp ${SONATYPE_WORK} \
   && ln -s ${NEXUS_DATA} ${SONATYPE_WORK}/nexus3 \
   && chown -R nexus:nexus ${NEXUS_DATA}
 
+#### Configure Nexus for SSL ####
+ENV JETTY_ETC="${NEXUS_HOME}/etc/jetty"
+ENV JETTY_HTTPS_XML="${JETTY_ETC}/jetty-https.xml"
+ENV SSL_CONFIG_DIR="${NEXUS_HOME}/etc/ssl"
+ENV NEXUS_PROPERTIES="${NEXUS_HOME}/etc/nexus-default.properties"
+
+RUN sed -i "s|<Set name=\"KeyStorePath\">.*</Set>|<Set name=\"KeyStorePath\">${SSL_CONFIG_DIR}/keystore.jks</Set>|g" ${JETTY_HTTPS_XML}
+RUN sed -i "s|<Set name=\"KeyStorePassword\">.*</Set>|<Set name=\"KeyStorePassword\">jrsjrs</Set>|g" ${JETTY_HTTPS_XML}
+RUN sed -i "s|<Set name=\"KeyManagerPassword\">.*</Set>|<Set name=\"KeyManagerPassword\">jrsjrs</Set>|g" ${JETTY_HTTPS_XML}
+RUN sed -i "s|<Set name=\"TrustStorePath\">.*</Set>|<Set name=\"TrustStorePath\">${SSL_CONFIG_DIR}/keystore.jks</Set>|g" ${JETTY_HTTPS_XML}
+RUN sed -i "s|<Set name=\"TrustStorePassword\">.*</Set>|<Set name=\"TrustStorePassword\">jrsjrs</Set>|g" ${JETTY_HTTPS_XML}
+
+RUN sed -i -e '/nexus-args=/ s/=.*/=${JETTY_ETC}\/jetty.xml,${JETTY_ETC}\/jetty-requestlog.xml,${JETTY_ETC}\/jetty-http.xml,${JETTY_ETC}\/jetty-https.xml,${JETTY_ETC}\/jetty-http-redirect-to-https.xml/' ${NEXUS_PROPERTIES}
+
+RUN echo "application-port-ssl=8443" >> ${NEXUS_PROPERTIES}
+
+RUN ${JAVA_HOME}/bin/keytool -genkeypair \
+    -keystore ${SSL_CONFIG_DIR}/keystore.jks \
+    -storepass jrsjrs \
+    -keypass jrsjrs \
+    -alias jetty \
+    -keyalg RSA \
+    -keysize 2048 \
+    -validity 5000 \
+    -dname "CN=*.deepsecs.com, OU=Example, O=Sonatype, L=Unspecified, ST=Unspecified, C=US" \
+    -ext "SAN=DNS:deepsecs.com" \
+    -ext "BC=ca:true"
+
+#### configure nexus runtime env ####
+RUN sed \
+    -e "s|karaf.home=.|karaf.home=${NEXUS_HOME}|g" \
+    -e "s|karaf.base=.|karaf.base=${NEXUS_HOME}|g" \
+    -e "s|karaf.etc=etc|karaf.etc=${NEXUS_HOME}/etc|g" \
+    -e "s|java.util.logging.config.file=etc|java.util.logging.config.file=${NEXUS_HOME}/etc|g" \
+    -e "s|karaf.data=data|karaf.data=${NEXUS_DATA}|g" \
+    -e "s|java.io.tmpdir=data/tmp|java.io.tmpdir=${NEXUS_DATA}/tmp|g" \
+    -i ${NEXUS_HOME}/bin/nexus.vmoptions
+
+EXPOSE 8081 5000 5001 8443
+
 VOLUME ${NEXUS_DATA}
 
-EXPOSE 8081
 USER nexus
 WORKDIR ${NEXUS_HOME}
 
