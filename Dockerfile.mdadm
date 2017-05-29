@@ -12,19 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM       deepsecs/nexus3:3.3.1-01
+FROM       deepsecs/nexus3_ssl:3.3.1-01
 
 MAINTAINER DeepSecs <13841495@qq.com>
 
 USER root
 
 RUN apt-get update \
-  && apt-get install -y kmod mdadm lvm2 \
+  && apt-get install -y kmod mdadm lvm2 sudo\
   && apt-get clean
 
 COPY ["start-container.bash","/"]
 RUN ["chmod","755","/start-container.bash"]
 
+RUN echo "nexus ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/nexus
+
+USER nexus
 WORKDIR ${NEXUS_HOME}
 
 # CMD ["bin/nexus", "run"]
