@@ -1,0 +1,11 @@
+#!/bin/bash
+
+CERT="$(keytool -printcert -sslserver deepsecs.com:8443 -rfc)"
+
+echo "echo \"${CERT}\" > nexus.crt"
+echo "mv nexus.crt /usr/local/share/ca-certificates/nexus.crt"
+echo "update-ca-certificates"
+echo "mkdir -p /etc/docker/certs.d/deepsecs.com:10443/"
+echo "cp /usr/local/share/ca-certificates/nexus.crt /etc/docker/certs.d/deepsecs.com:10443/"
+echo "docker login -u admin -p admin123 -e 13841495@qq.com https://deepsecs.com:10443/v2/"
+

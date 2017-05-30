@@ -28,6 +28,7 @@ COPY ["start-container.bash","/"]
 RUN ["chmod","755","/start-container.bash"]
 
 RUN echo "nexus ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/nexus
+RUN echo "127.0.0.1	deepsecs.com" > /etc/hosts
 
 USER nexus
 WORKDIR ${NEXUS_HOME}
